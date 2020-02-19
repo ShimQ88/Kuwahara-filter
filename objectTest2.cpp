@@ -1,3 +1,4 @@
+//g++ -std=c++11 objectTest2.cpp -o objectTest2 `pkg-config --cflags --libs opencv`
 //Massey University
 //ID:15145234 Name:Kyuwon Shim
 //Mail:kyu.shim88@gmail.com
@@ -18,7 +19,7 @@ using namespace cv;
 using namespace std;
 using namespace chrono;
 
-//g++ -std=c++11 objectTest2.cpp -o objectTest2 `pkg-config --cflags --libs opencv`
+
 /*--------------- SubtractionTest ---------------*/
 
 
@@ -29,7 +30,7 @@ using namespace chrono;
 #define pixelR(image,x,y) image.data[image.step[0]*y+image.step[1]*x+2]	//Red color space
 
 
-void Integral_test(Mat image1, double **integral_image){
+void Integral_test(Mat image1, double **integral_image, double **squared_integral_image){
 //This is the function for printing out 1/20 size of original metrices values and summed-area table values.
 //Checking whether properly summed or not. 	
 
@@ -37,9 +38,9 @@ void Integral_test(Mat image1, double **integral_image){
 		1/20 size of original metrices values
 	*/
 	cout<<"The First image"<<endl;
-	for(int i=0;i<image1.cols/20;i++){
+	for(int i=0;i<image1.cols;i++){
 		cout<<"[ ";
-		for(int j=0;j<image1.rows/20;j++){
+		for(int j=0;j<image1.rows;j++){
 			cout<<(int)Mpixel(image1,i,j)<<" ";
 		}
 		cout<<" ]"<<endl;
@@ -57,35 +58,58 @@ void Integral_test(Mat image1, double **integral_image){
 		}
 		cout<<" ]"<<endl;
 	}
+
+
+	cout<<"The squared image"<<endl;
+	for(int i=0;i<image1.cols/20;i++){
+		cout<<"[ ";
+		for(int j=0;j<image1.rows/20;j++){
+			cout<<squared_integral_image[i][j]<<" ";
+		}
+		cout<<" ]"<<endl;
+	}
 	//////////////////////////////////////////
 }
 
-void Integral_Gray_Initialize(Mat image1, double **integral_image){
+void Integral_Gray_Initialize(Mat image1, double **integral_image,double **squared_integral_image){
 	//This is the function for creating summed-area table in gray image.
-	for(int i=0;i<image1.cols;i++){
-		for(int j=0;j<image1.rows;j++){
+	for(int i=0;i<image1.cols+1;i++){
+		for(int j=0;j<image1.rows+1;j++){
 			if((i==0)||(j==0)){//The value of the first row and column is zero. 
 				integral_image[i][j]=0;
+				squared_integral_image[i][j]=0;
 			}else{
 				integral_image[i][j]=integral_image[i-1][j]+integral_image[i][j-1]-integral_image[i-1][j-1]+(int)Mpixel(image1,i-1,j-1);
+				squared_integral_image[i][j]=squared_integral_image[i-1][j]+squared_integral_image[i][j-1]-squared_integral_image[i-1][j-1]
+				+(int)Mpixel(image1,i-1,j-1)*(int)Mpixel(image1,i-1,j-1);
 			}
 			
 		}
 	}
 }
 
-void Integral_Color_Image(Mat3b image1, double **integral_image_B, double **integral_image_G, double **integral_image_R){
+
+
+void Integral_Color_Initialize(Mat3b image1, double **integral_image_B, double **integral_image_G, double **integral_image_R, double **squared_integral_image_B, double **squared_integral_image_G, double **squared_integral_image_R){
 	//This is the function for creating summed-area table in color image.
-	for(int i=0;i<image1.cols;i++){
-		for(int j=0;j<image1.rows;j++){
+	for(int i=0;i<image1.cols+1;i++){
+		for(int j=0;j<image1.rows+1;j++){
 			if((i==0)||(j==0)){//The value of the first row and column is zero.
 				integral_image_B[i][j]=0;
 				integral_image_G[i][j]=0;
 				integral_image_R[i][j]=0;
+
+				squared_integral_image_B[i][j]=0;
+				squared_integral_image_G[i][j]=0;
+				squared_integral_image_R[i][j]=0;
 			}else{
 				integral_image_B[i][j]=integral_image_B[i-1][j]+integral_image_B[i][j-1]-integral_image_B[i-1][j-1]+(int)pixelB(image1,i-1,j-1);
 				integral_image_G[i][j]=integral_image_G[i-1][j]+integral_image_G[i][j-1]-integral_image_G[i-1][j-1]+(int)pixelG(image1,i-1,j-1);
 				integral_image_R[i][j]=integral_image_R[i-1][j]+integral_image_R[i][j-1]-integral_image_R[i-1][j-1]+(int)pixelR(image1,i-1,j-1);
+
+				squared_integral_image_B[i][j]=squared_integral_image_B[i-1][j]+squared_integral_image_B[i][j-1]-squared_integral_image_B[i-1][j-1]+(int)pixelB(image1,i-1,j-1)*(int)pixelB(image1,i-1,j-1);
+				squared_integral_image_G[i][j]=squared_integral_image_G[i-1][j]+squared_integral_image_G[i][j-1]-squared_integral_image_G[i-1][j-1]+(int)pixelG(image1,i-1,j-1)*(int)pixelG(image1,i-1,j-1);
+				squared_integral_image_R[i][j]=squared_integral_image_R[i-1][j]+squared_integral_image_R[i][j-1]-squared_integral_image_R[i-1][j-1]+(int)pixelR(image1,i-1,j-1)*(int)pixelR(image1,i-1,j-1);
 			}
 			
 		}
@@ -93,8 +117,7 @@ void Integral_Color_Image(Mat3b image1, double **integral_image_B, double **inte
 }
 
 
-
-void Filter_Gray_Integral(Mat image1, Mat image2, double** integral_image, int window_size){
+void Filter_Gray_Integral(Mat image1, Mat image2, double** integral_image,double** squared_integral_image, int window_size){
 	//This is function for applying the Kuwahara filter to image2, it must require summed-area table.
 
 	//Mat image1 is the source image with gray scale. 
@@ -127,51 +150,115 @@ void Filter_Gray_Integral(Mat image1, Mat image2, double** integral_image, int w
 		for(int j=(window_y_size/2);j<picture_y_size-(window_y_size/2+1);j++){
 			
 			int f[4];
+			int s_f[4];
+			int result[4];
 			int small_window_size=(window_x_size/2)*(window_y_size/2);
 
-			int i1=i+1;
-			int j1=j+1;
+			int i1=i;
+			int j1=j;
 
-			int i2=i+1+(window_x_size/2);
-			int j2=j+1;
+			int i2=i+(window_x_size/2);
+			int j2=j;
 
-			int i3=i+1;
-			int j3=j+1+(window_y_size/2);
+			int i3=i;
+			int j3=j+(window_y_size/2);
 
-			int i4=i+1+(window_x_size/2);
-			int j4=j+1+(window_y_size/2);
+			int i4=i+(window_x_size/2);
+			int j4=j+(window_y_size/2);
+
+			int mean_f[4];
 
 			
 
 
 
-			f[0]=integral_image[i1][j1]-integral_image[i1-(window_x_size/2)][j1]
-			-integral_image[i1][j1-(window_y_size/2)]+integral_image[i1-(window_x_size/2)][j1-(window_y_size/2)];
-			f[0]=f[0]/small_window_size;
+			// f[0]=integral_image[i1][j1]-integral_image[i1-(window_x_size/2)][j1]
+			// -integral_image[i1][j1-(window_y_size/2)]+integral_image[i1-(window_x_size/2)][j1-(window_y_size/2)];
+
+
+			f[0]=integral_image[i1-1][j1]-integral_image[i1][j1-1]
+			-integral_image[i1-1][j1-1]+(int)Mpixel(image1,i1-1,j1-1);
+
+
+			// s_f[0]=squared_integral_image[i1][j1]-squared_integral_image[i1-(window_x_size/2)][j1]
+			// -squared_integral_image[i1][j1-(window_y_size/2)]+squared_integral_image[i1-(window_x_size/2)][j1-(window_y_size/2)];
+
+
+			cout<<"s_f: "<<s_f[0]<<endl;
+			cout<<"f[0]: "<<f[0]<<endl;
+			// f[0]=f[0]/small_window_size;
+			// cout<<"s_f: "<<s_f[0]<<endl;
+			// cout<<"(f[0]*f[0])/small_window_size): "<<((f[0]*f[0])/small_window_size)<<endl;
+			
+			// result[0]=(f[0]*f[0]-((f[0]*f[0])/small_window_size))/small_window_size;
+
+			result[0]=(s_f[0]-((f[0]*f[0])/small_window_size));
+			// result[0]=sqrt(result[0]);
 
 
 			f[1]=integral_image[i2][j2]-integral_image[i2-(window_x_size/2)][j2]
 			-integral_image[i2][j2-(window_y_size/2)]+integral_image[i2-(window_x_size/2)][j2-(window_y_size/2)];
-			f[1]=f[1]/small_window_size;
+
+			s_f[1]=squared_integral_image[i2][j2]-squared_integral_image[i2-(window_x_size/2)][j2]
+			-squared_integral_image[i2][j2-(window_y_size/2)]+squared_integral_image[i2-(window_x_size/2)][j2-(window_y_size/2)];
+			// f[1]=f[1]/small_window_size;
+			
+
+
+			cout<<"s_f: "<<s_f[1]<<endl;
+			cout<<"f[1]: "<<f[1]<<endl;
+			// result[1]=(f[1]*f[1]-((f[1]*f[1])/small_window_size))/small_window_size;
+			result[1]=(s_f[1]-((f[1]*f[1])/small_window_size));
+			// result[1]=sqrt(result[1]);
+
 
 			f[2]=integral_image[i3][j3]-integral_image[i3-(window_x_size/2)][j3]
 			-integral_image[i3][j3-(window_y_size/2)]+integral_image[i3-(window_x_size/2)][j3-(window_y_size/2)];
-			f[2]=f[2]/small_window_size;
+
+			s_f[2]=squared_integral_image[i3][j3]-squared_integral_image[i3-(window_x_size/2)][j3]
+			-squared_integral_image[i3][j3-(window_y_size/2)]+squared_integral_image[i3-(window_x_size/2)][j3-(window_y_size/2)];
+			// f[2]=f[2]/small_window_size;
+
+
+			cout<<"s_f: "<<s_f[2]<<endl;
+			cout<<"f[2]: "<<f[2]<<endl;
+			
+			// result[2]=(f[2]*f[2]-((f[2]*f[2])/small_window_size))/small_window_size;
+			result[2]=(s_f[2]-((f[2]*f[2])/small_window_size));
+			// result[2]=sqrt(result[2]);
+
 
 			f[3]=integral_image[i4][j4]-integral_image[i4-(window_x_size/2)][j4]
 			-integral_image[i4][j4-(window_y_size/2)]+integral_image[i4-(window_x_size/2)][j4-(window_y_size/2)];
-			f[3]=f[3]/small_window_size;
 
+			s_f[3]=squared_integral_image[i4][j4]-squared_integral_image[i4-(window_x_size/2)][j4]
+			-squared_integral_image[i4][j4-(window_y_size/2)]+squared_integral_image[i4-(window_x_size/2)][j4-(window_y_size/2)];
+			// f[3]=f[3]/small_window_size;
+
+
+			cout<<"s_f: "<<s_f[3]<<endl;
+			cout<<"f[3]: "<<f[3]<<endl;
+
+			
+			// result[3]=(f[3]*f[3]-((f[3]*f[3])/small_window_size))/small_window_size;
+			result[3]=(s_f[3]-((f[3]*f[3])/small_window_size));
+			// result[3]=sqrt(result[3]);
 			
 			/*
 				The process finding the smallest value between f[0] and f[3].
 			*/
 			int final=9999;
 			for(int l=0;l<4;l++){
-				if(final>f[l]){
-					final=f[l];
+				cout<<"result: "<<result[l]<<endl;
+				// if(final>f[l]){
+				// 	final=f[l];
+				// }
+				if(final>result[l]){
+					final=result[l];
 				}
 			}
+			cout<<"final: "<<final<<endl;
+			getchar();
 
 			Mpixel(image2,i,j)=final;
 			//////////////////////////// 
@@ -181,143 +268,726 @@ void Filter_Gray_Integral(Mat image1, Mat image2, double** integral_image, int w
 
 }
 
+void Filter_Gray_Integral2(Mat image1, Mat image2, double** integral_image,double** squared_integral_image, int window_size){
+	//This is function for applying the Kuwahara filter to image2, it must require summed-area table.
 
-void Filter_Color_Integral(Mat3b image1, Mat3b image2, double** integral_image_B, double** integral_image_G, double** integral_image_R, int window_size){
-	// This is function for applying the Kuwahara filter to image2, it must require summed-area table.
+	//Mat image1 is the source image with gray scale. 
+	//Mat image2 is the final output which is applied to Kuwahara filter in gray scale image.
+	//double** integral_image is 2-dimensional array which stores the summed-area table.
+	//int window_size is the size of window it is big more blurly when the value is high.
 
-	// Mat image1 is the source image with RGB scale. 
-	// Mat image2 is the final output which is applied to Kuwahara filter in RGB image.
-	// double** integral_image_B is 2-dimensional array which stores the summed-area table of Blue color space.
-	// double** integral_image_G is 2-dimensional array which stores the summed-area table of Green color space.
-	// double** integral_image_R is 2-dimensional array which stores the summed-area table of Red color space.
-	// int window_size is the size of window it is big more blurly when the value is high.
+	int picture_x_size=image1.cols;//the x-axis length of source image.
+	int picture_y_size=image1.rows;//the y-axis length of source image.
+	int window_x_size=window_size;//the x-axis length of window.
+	int window_y_size=window_size;//the y-axis length of window.
 
-	// This is color version of kuwahara filter, the process is mostly similar with gray version.
 
-	int picture_x_size=image1.cols;
-	int picture_y_size=image1.rows;
-	int window_x_size=window_size;
-	int window_y_size=window_size;
+	/* The function of Kuhawara filter*/
+			
+	// mk=1(n+1)×(n+1)×∑(x,y)∈θkφ(f(x,y)
+
+	// k∈{0,1,2,3},fis the source image function,
+	// f(x,y)is the value of the pixel at coordinates(x,y),
+	// φis a function calculating the value of a particular pixel,
+	// 1/(n+1)×(n+1)is the number of pixels in the current area,
+	// n is the value obtained directly from the filter windowsize.
+
+	// reference by 
+	// https://link-springer-com.ezproxy.massey.ac.nz/content/pdf/10.1007%2Fs11760-015-0791-3.pdf
+	// page 665
+	/**********************************/
 
 	for(int i=(window_x_size/2);i<picture_x_size-(window_x_size/2+1);i++){
 		for(int j=(window_y_size/2);j<picture_y_size-(window_y_size/2+1);j++){
-			int f_B[4];
-			int f_G[4];
-			int f_R[4];
-
-			int small_window_size=(window_x_size/2)*(window_y_size/2);
-
-
-			int i1=i+1;
-			int j1=j+1;
-
-			int i2=i+1+(window_x_size/2);
-			int j2=j+1;
-
-			int i3=i+1;
-			int j3=j+1+(window_y_size/2);
-
-			int i4=i+1+(window_x_size/2);
-			int j4=j+1+(window_y_size/2);
-
-
-			f_B[0]=integral_image_B[i1][j1]-integral_image_B[i1-(window_x_size/2)][j1]
-			-integral_image_B[i1][j1-(window_y_size/2)]+integral_image_B[i1-(window_x_size/2)][j1-(window_y_size/2)];
-			f_B[0]=f_B[0]/small_window_size;
-
-			f_B[1]=integral_image_B[i2][j2]-integral_image_B[i2-(window_x_size/2)][j2]
-			-integral_image_B[i2][j2-(window_y_size/2)]+integral_image_B[i2-(window_x_size/2)][j2-(window_y_size/2)];
-			f_B[1]=f_B[1]/small_window_size;
-
-			f_B[2]=integral_image_B[i3][j3]-integral_image_B[i3-(window_x_size/2)][j3]
-			-integral_image_B[i3][j3-(window_y_size/2)]+integral_image_B[i3-(window_x_size/2)][j3-(window_y_size/2)];
-			f_B[2]=f_B[2]/small_window_size;
-
-			f_B[3]=integral_image_B[i4][j4]-integral_image_B[i4-(window_x_size/2)][j4]
-			-integral_image_B[i4][j4-(window_y_size/2)]+integral_image_B[i4-(window_x_size/2)][j4-(window_y_size/2)];
-			f_B[3]=f_B[3]/small_window_size;
-
-
-			f_G[0]=integral_image_G[i1][j1]-integral_image_G[i1-(window_x_size/2)][j1]
-			-integral_image_G[i1][j1-(window_y_size/2)]+integral_image_G[i1-(window_x_size/2)][j1-(window_y_size/2)];
-			f_G[0]=f_G[0]/small_window_size;
-
-			f_G[1]=integral_image_G[i2][j2]-integral_image_G[i2-(window_x_size/2)][j2]
-			-integral_image_G[i2][j2-(window_y_size/2)]+integral_image_G[i2-(window_x_size/2)][j2-(window_y_size/2)];
-			f_G[1]=f_G[1]/small_window_size;
-
-			f_G[2]=integral_image_G[i3][j3]-integral_image_G[i3-(window_x_size/2)][j3]
-			-integral_image_G[i3][j3-(window_y_size/2)]+integral_image_G[i3-(window_x_size/2)][j3-(window_y_size/2)];
-			f_G[2]=f_G[2]/small_window_size;
-
-			f_G[3]=integral_image_G[i4][j4]-integral_image_G[i4-(window_x_size/2)][j4]
-			-integral_image_G[i4][j4-(window_y_size/2)]+integral_image_G[i4-(window_x_size/2)][j4-(window_y_size/2)];
-			f_G[3]=f_G[3]/small_window_size;
-
-
-			f_R[0]=integral_image_R[i1][j1]-integral_image_R[i1-(window_x_size/2)][j1]
-			-integral_image_R[i1][j1-(window_y_size/2)]+integral_image_R[i1-(window_x_size/2)][j1-(window_y_size/2)];
-			f_R[0]=f_R[0]/small_window_size;
-
-			f_R[1]=integral_image_R[i2][j2]-integral_image_R[i2-(window_x_size/2)][j2]
-			-integral_image_R[i2][j2-(window_y_size/2)]+integral_image_R[i2-(window_x_size/2)][j2-(window_y_size/2)];
-			f_R[1]=f_R[1]/small_window_size;
-
-			f_R[2]=integral_image_R[i3][j3]-integral_image_R[i3-(window_x_size/2)][j3]
-			-integral_image_R[i3][j3-(window_y_size/2)]+integral_image_R[i3-(window_x_size/2)][j3-(window_y_size/2)];
-			f_R[2]=f_R[2]/small_window_size;
-
-			f_R[3]=integral_image_R[i4][j4]-integral_image_R[i4-(window_x_size/2)][j4]
-			-integral_image_R[i4][j4-(window_y_size/2)]+integral_image_R[i4-(window_x_size/2)][j4-(window_y_size/2)];
-			f_R[3]=f_R[3]/small_window_size;
-
-
 			
+			int f[4];
+			int s_f[4];
+			int result[4];
+			int small_window_size=(window_x_size/2+1)*(window_y_size/2+1);
+
+			int i0=i;
+			int j0=j;
+
+			int i1=i+(window_x_size/2);
+			int j1=j;
+
+			int i2=i;
+			int j2=j+(window_y_size/2);
+
+			int i3=i+(window_x_size/2);
+			int j3=j+(window_y_size/2);
+
+			int mean_f[4];
+
+			// cout<<"small_window_size: "<<small_window_size<<endl;
+
+
+
+
+			// f[0]=integral_image[i1][j1]-integral_image[i1-(window_x_size/2)][j1]
+			// -integral_image[i1][j1-(window_y_size/2)]+integral_image[i1-(window_x_size/2)][j1-(window_y_size/2)];
+
+
+			f[0]=integral_image[i0+(window_x_size/2)][j0+(window_y_size/2)]-integral_image[i0-1][j0+(window_y_size/2)]
+			-integral_image[i0+(window_y_size/2)][j0-1]+integral_image[i0-1][j0-1];
+
+			s_f[0]=squared_integral_image[i0+(window_x_size/2)][j0+(window_y_size/2)]-squared_integral_image[i0-1][j0+(window_y_size/2)]
+			-squared_integral_image[i0+(window_y_size/2)][j0-1]+squared_integral_image[i0-1][j0-1];
+
+			// cout<<"integral_image[i1+(window_x_size/2)][j1+(window_y_size/2)]:"<<integral_image[i1+(window_x_size/2)][j1+(window_y_size/2)]<<endl;
+			// cout<<"-integral_image[i1][j1+(window_y_size/2)]:"<<integral_image[i1][j1+(window_y_size/2)]<<endl;
+			// cout<<"-integral_image[i1+(window_y_size/2)][j1]:"<<integral_image[i1+(window_y_size/2)][j1]<<endl;
+			// cout<<"integral_image[i1][j1]:"<<integral_image[i1][j1]<<endl;
+
+			result[0]=(s_f[0]-((f[0]*f[0])/small_window_size))/small_window_size;
+
+			// cout<<"s_f[0]: "<<s_f[0]<<endl;
+			// cout<<"f[0]: "<<	f[0]<<endl;
+
+
+			f[1]=integral_image[i1+(window_x_size/2)][j1+(window_y_size/2)]-integral_image[i1-1][j1+(window_y_size/2)]
+			-integral_image[i1+(window_y_size/2)][j1-1]+integral_image[i1-1][j1-1];
+
+			s_f[1]=squared_integral_image[i1+(window_x_size/2)][j1+(window_y_size/2)]-squared_integral_image[i1-1][j1+(window_y_size/2)]
+			-squared_integral_image[i1+(window_y_size/2)][j1-1]+squared_integral_image[i1-1][j1-1];
+
+			result[1]=(s_f[1]-((f[1]*f[1])/small_window_size))/small_window_size;
+
+
+			f[2]=integral_image[i2+(window_x_size/2)][j2+(window_y_size/2)]-integral_image[i2-1][j2+(window_y_size/2)]
+			-integral_image[i2+(window_y_size/2)][j2-1]+integral_image[i2-1][j2-1];
+
+			s_f[2]=squared_integral_image[i2+(window_x_size/2)][j2+(window_y_size/2)]-squared_integral_image[i2-1][j2+(window_y_size/2)]
+			-squared_integral_image[i2+(window_y_size/2)][j2-1]+squared_integral_image[i2-1][j2-1];
+
+			result[2]=(s_f[2]-((f[2]*f[2])/small_window_size))/small_window_size;
+
+
+			f[3]=integral_image[i3+(window_x_size/2)][j3+(window_y_size/2)]-integral_image[i3-1][j3+(window_y_size/2)]
+			-integral_image[i3+(window_y_size/2)][j3-1]+integral_image[i3-1][j3-1];
+
+			s_f[3]=squared_integral_image[i3+(window_x_size/2)][j3+(window_y_size/2)]-squared_integral_image[i3-1][j3+(window_y_size/2)]
+			-squared_integral_image[i3+(window_y_size/2)][j3-1]+squared_integral_image[i3-1][j3-1];
+
+			result[3]=(s_f[3]-((f[3]*f[3])/small_window_size))/small_window_size;
+
+			// cout<<"s_f[3]: "<<s_f[3]<<endl;
+			// cout<<"f[3]: "<<	f[3]<<endl;
+			// cout<<"small_window_size: "<<small_window_size<<endl; 
+			// cout<<"result[3]: "<<result[3]<<endl;			
+			// cout<<"f[3]*f[3]: "<<f[3]*f[3]<<endl;
+			// cout<<"f[3]*f[3])/small_window_size: "<<(f[3]*f[3])/small_window_size<<endl;
 			/*
-				The process finding the smallest value of Blue color space between f_B[0] and f_B[3].
-			*/			
+				The process finding the smallest value between f[0] and f[3].
+			*/
 			int final=9999;
 			for(int l=0;l<4;l++){
-				if(final>f_B[l]){
-					final=f_B[l];
+				// cout<<"result: "<<result[l]<<endl;
+				// if(final>f[l]){
+				// 	final=f[l];
+				// }
+				if(final>result[l]){
+					final=result[l];
 				}
 			}
+			cout<<"final: "<<final<<endl;
+			
+			// getchar();
 
-			pixelB(image2,i,j)=final;
-			/////////////////////////
-
-			/*
-				The process finding the smallest value of Green color space between f_G[0] and f_G[3].
-			*/
-
-			final=9999;
-			for(int l=0;l<4;l++){
-				if(final>f_G[l]){
-					final=f_G[l];
-				}
-			}
-
-			pixelG(image2,i,j)=final;
-			/////////////////////////
-
-			/*
-				The process finding the smallest value of Red color space between f_R[0] and f_R[3].
-			*/
-
-			final=9999;
-			for(int l=0;l<4;l++){
-				if(final>f_R[l]){
-					final=f_R[l];
-				}
-			}
-
-			pixelR(image2,i,j)=final;
-			/////////////////////////
+			Mpixel(image2,i,j)=final;
+			//////////////////////////// 
 
 		}
 	}
 
 }
+
+void Kuwahara_Filter_Gray_With_Sum_Table(Mat source_image, Mat output_image, double** integral_image, double** squared_integral_image, int window_size){
+	//This is function for applying the Kuwahara filter to output_image, it must require summed-area table.
+
+	//Mat source_image is the source image with gray scale. 
+	//Mat output_image is the final output which is applied to Kuwahara filter in gray scale image.
+	//double** integral_image is 2-dimensional array which stores the summed-area table.
+	//int window_size is the size of window it is big more blurly when the value is high.
+
+	int picture_x_size=source_image.cols;//the x-axis length of source image.
+	int picture_y_size=source_image.rows;//the y-axis length of source image.
+	
+
+	for(int i=0;i<=source_image.cols-(window_size);i++){
+		for(int j=0;j<=source_image.rows-(window_size);j++){
+			double f[4];
+			double s_f[4];
+			double result[4];
+			int small_window_size=(window_size/2+1)*(window_size/2+1);
+
+			int i_col[4];
+			int i_row[4];
+
+			i_col[0]=i;
+			i_row[0]=j;
+
+			i_col[1]=i+(window_size/2);
+			i_row[1]=j;
+
+			i_col[2]=i;
+			i_row[2]=j+(window_size/2);
+
+			i_col[3]=i+(window_size/2);
+			i_row[3]=j+(window_size/2);
+
+			double mean_fa[4];
+
+			
+			for(int a=0;a<4;a++){
+				f[a]=integral_image[i_col[a]+(window_size/2)+1][i_row[a]+(window_size/2)+1]-integral_image[i_col[a]][i_row[a]+(window_size/2)+1]
+				-integral_image[i_col[a]+(window_size/2)+1][i_row[a]]+integral_image[i_col[a]][i_row[a]];
+
+				s_f[a]=squared_integral_image[i_col[a]+(window_size/2)+1][i_row[a]+(window_size/2)+1]-squared_integral_image[i_col[a]][i_row[a]+(window_size/2)+1]
+				-squared_integral_image[i_col[a]+(window_size/2)+1][i_row[a]]+squared_integral_image[i_col[a]][i_row[a]];
+
+				mean_fa[a]=f[a]/small_window_size;
+				// cout<<"mean_fa["<<a<<"]: "<<mean_fa[a]<<endl;
+			}
+			for(int a=0;a<4;a++){
+				result[a]=(s_f[a]-((f[a]*f[a])/small_window_size))/small_window_size;
+			}
+
+
+			double final=9999;
+			int min_index=0;
+			for(int l=0;l<4;l++){
+				if(final>result[l]){
+					final=result[l];
+					min_index=l;
+				}
+			}
+			Mpixel(output_image,i+window_size/2,j+window_size/2)=(int)mean_fa[min_index];
+		}
+	}
+
+}
+
+void Kuwahara_Filter_Color_With_Sum_Table(Mat3b source_image, Mat3b output_image, double **integral_image_B, double **integral_image_G, double **integral_image_R, double **squared_integral_image_B, double **squared_integral_image_G, double **squared_integral_image_R, int window_size){
+	//This is function for applying the Kuwahara filter to output_image, it must require summed-area table.
+
+	//Mat source_image is the source image with gray scale. 
+	//Mat output_image is the final output which is applied to Kuwahara filter in gray scale image.
+	//double** integral_image is 2-dimensional array which stores the summed-area table.
+	//int window_size is the size of window it is big more blurly when the value is high.
+
+	int picture_x_size=source_image.cols;//the x-axis length of source image.
+	int picture_y_size=source_image.rows;//the y-axis length of source image.
+	
+
+	for(int i=0;i<=source_image.cols-(window_size);i++){
+		for(int j=0;j<=source_image.rows-(window_size);j++){
+			double f_B[4];
+			double f_G[4];
+			double f_R[4];
+			double s_f_B[4];
+			double s_f_G[4];
+			double s_f_R[4];
+			double result_B[4];
+			double result_G[4];
+			double result_R[4];
+			int small_window_size=(window_size/2+1)*(window_size/2+1);
+
+			int i_col[4];
+			int i_row[4];
+
+			i_col[0]=i;
+			i_row[0]=j;
+
+			i_col[1]=i+(window_size/2);
+			i_row[1]=j;
+
+			i_col[2]=i;
+			i_row[2]=j+(window_size/2);
+
+			i_col[3]=i+(window_size/2);
+			i_row[3]=j+(window_size/2);
+
+			double mean_fa_B[4];
+			double mean_fa_G[4];
+			double mean_fa_R[4];
+
+			for(int a=0;a<4;a++){
+				f_B[a]=integral_image_B[i_col[a]+(window_size/2)+1][i_row[a]+(window_size/2)+1]-integral_image_B[i_col[a]][i_row[a]+(window_size/2)+1]
+				-integral_image_B[i_col[a]+(window_size/2)+1][i_row[a]]+integral_image_B[i_col[a]][i_row[a]];
+
+				s_f_B[a]=squared_integral_image_B[i_col[a]+(window_size/2)+1][i_row[a]+(window_size/2)+1]-squared_integral_image_B[i_col[a]][i_row[a]+(window_size/2)+1]
+				-squared_integral_image_B[i_col[a]+(window_size/2)+1][i_row[a]]+squared_integral_image_B[i_col[a]][i_row[a]];
+
+				mean_fa_B[a]=f_B[a]/small_window_size;
+				// cout<<"mean_fa_B["<<a<<"]: "<<mean_fa_B[a]<<endl;
+			}
+
+			for(int a=0;a<4;a++){
+				f_G[a]=integral_image_G[i_col[a]+(window_size/2)+1][i_row[a]+(window_size/2)+1]-integral_image_G[i_col[a]][i_row[a]+(window_size/2)+1]
+				-integral_image_G[i_col[a]+(window_size/2)+1][i_row[a]]+integral_image_G[i_col[a]][i_row[a]];
+
+				s_f_G[a]=squared_integral_image_G[i_col[a]+(window_size/2)+1][i_row[a]+(window_size/2)+1]-squared_integral_image_G[i_col[a]][i_row[a]+(window_size/2)+1]
+				-squared_integral_image_G[i_col[a]+(window_size/2)+1][i_row[a]]+squared_integral_image_G[i_col[a]][i_row[a]];
+
+				mean_fa_G[a]=f_G[a]/small_window_size;
+				// cout<<"mean_fa_G["<<a<<"]: "<<mean_fa_G[a]<<endl;
+			}
+			
+			for(int a=0;a<4;a++){
+				f_R[a]=integral_image_R[i_col[a]+(window_size/2)+1][i_row[a]+(window_size/2)+1]-integral_image_R[i_col[a]][i_row[a]+(window_size/2)+1]
+				-integral_image_R[i_col[a]+(window_size/2)+1][i_row[a]]+integral_image_R[i_col[a]][i_row[a]];
+
+				s_f_R[a]=squared_integral_image_R[i_col[a]+(window_size/2)+1][i_row[a]+(window_size/2)+1]-squared_integral_image_R[i_col[a]][i_row[a]+(window_size/2)+1]
+				-squared_integral_image_R[i_col[a]+(window_size/2)+1][i_row[a]]+squared_integral_image_R[i_col[a]][i_row[a]];
+
+				mean_fa_R[a]=f_R[a]/small_window_size;
+				// cout<<"mean_fa_R["<<a<<"]: "<<mean_fa_R[a]<<endl;
+			}
+
+			for(int a=0;a<4;a++){
+				result_B[a]=(s_f_B[a]-((f_B[a]*f_B[a])/small_window_size))/small_window_size;
+			}
+
+			for(int a=0;a<4;a++){
+				result_G[a]=(s_f_G[a]-((f_G[a]*f_G[a])/small_window_size))/small_window_size;
+			}
+
+			for(int a=0;a<4;a++){
+				result_R[a]=(s_f_R[a]-((f_R[a]*f_R[a])/small_window_size))/small_window_size;
+			}
+
+
+			double final=9999;
+			int min_index=0;
+			for(int l=0;l<4;l++){
+				if(final>result_B[l]){
+					final=result_B[l];
+					min_index=l;
+				}
+			}
+
+			pixelB(output_image,i+window_size/2,j+window_size/2)=(int)mean_fa_B[min_index];
+
+			final=9999;
+			min_index=0;
+			for(int l=0;l<4;l++){
+				if(final>result_G[l]){
+					final=result_G[l];
+					min_index=l;
+				}
+			}
+
+			pixelG(output_image,i+window_size/2,j+window_size/2)=(int)mean_fa_G[min_index];
+
+			final=9999;
+			min_index=0;
+
+			for(int l=0;l<4;l++){
+				if(final>result_R[l]){
+					final=result_R[l];
+					min_index=l;
+				}
+			}
+
+			pixelR(output_image,i+window_size/2,j+window_size/2)=(int)mean_fa_R[min_index];
+		}
+	}
+
+}
+
+
+
+
+void Filter_Gray_Integral4(Mat image1, Mat image2, double** integral_image,double** squared_integral_image, int window_size){
+	//This is function for applying the Kuwahara filter to image2, it must require summed-area table.
+
+	//Mat image1 is the source image with gray scale. 
+	//Mat image2 is the final output which is applied to Kuwahara filter in gray scale image.
+	//double** integral_image is 2-dimensional array which stores the summed-area table.
+	//int window_size is the size of window it is big more blurly when the value is high.
+
+	int picture_x_size=image1.cols;//the x-axis length of source image.
+	int picture_y_size=image1.rows;//the y-axis length of source image.
+	int window_x_size=window_size;//the x-axis length of window.
+	int window_y_size=window_size;//the y-axis length of window.
+
+
+	for(int i=(window_x_size/2);i<picture_x_size-(window_x_size/2+1);i++){
+		for(int j=(window_y_size/2);j<picture_y_size-(window_y_size/2+1);j++){
+			float f[4];
+			float s_f[4];
+			float result[4];
+			int small_window_size=(window_x_size/2+1)*(window_y_size/2+1);
+
+			int i0=i;
+			int j0=j;
+
+			int i1=i+(window_x_size/2);
+			int j1=j;
+
+			int i2=i;
+			int j2=j+(window_y_size/2);
+
+			int i3=i+(window_x_size/2);
+			int j3=j+(window_y_size/2);
+
+			float mean_f[4];
+
+			cout<<"small_window_size: "<<small_window_size<<endl;
+
+			mean_f[0]=0;
+			for(int l=i-(window_x_size/2);l<=i;l++){
+				for(int k=j-(window_y_size/2);k<=j;k++){
+					mean_f[0]=mean_f[0]+(float)Mpixel(image1,l,k);
+				}
+			}
+			mean_f[0]=mean_f[0]/small_window_size;
+
+			cout<<"mean_f[0]: "<<mean_f[0]<<endl;
+			
+			//the section of f[1]
+			//  | |*|*|        
+			//	| |*|*|
+			//	| | | |
+			mean_f[1]=0;
+			for(int l=i;l<=i+(window_x_size/2);l++){
+				for(int k=j-(window_y_size/2);k<=j;k++){
+					mean_f[1]=mean_f[1]+(float)Mpixel(image1,l,k);
+				}
+			}
+			mean_f[1]=mean_f[1]/small_window_size;
+
+			cout<<"mean_f[1]: "<<mean_f[1]<<endl;
+
+			//the section of f[2]
+			//  | | | |        
+			//	|*|*| |
+			//	|*|*| |
+			mean_f[2]=0;
+			for(int l=i-(window_x_size/2);l<=i;l++){
+				for(int k=j;k<=j+(window_y_size/2);k++){
+					mean_f[2]=mean_f[2]+(float)Mpixel(image1,l,k);
+				}
+			}
+			mean_f[2]=mean_f[2]/small_window_size;
+
+
+			//the section of f[3]
+			//  | | | |        
+			//	| |*|*|
+			//	| |*|*|
+			mean_f[3]=0;
+			for(int l=i;l<=i+(window_x_size/2);l++){
+				for(int k=j;k<=j+(window_x_size/2);k++){
+					mean_f[3]=mean_f[3]+(float)Mpixel(image1,l,k);
+				}
+			}
+
+			mean_f[3]=mean_f[3]/small_window_size;
+
+
+
+
+
+			//the section of f[0]
+			//  |*|*| |        
+			//	|*|*| |
+			//	| | | |
+
+			float temp=0;
+			result[0]=0;
+
+
+			for(int l=i-(window_x_size/2);l<=i;l++){
+				for(int k=j-(window_y_size/2);k<=j;k++){
+					temp=mean_f[0]-(float)Mpixel(image1,l,k);
+					temp=temp*temp;
+					result[0]=result[0]+temp;
+				}
+			}
+
+			result[0]=result[0]/small_window_size;
+
+
+			
+			//the section of f[1]
+			//  | |*|*|        
+			//	| |*|*|
+			//	| | | |
+			result[1]=0;
+			for(int l=i;l<=i+(window_x_size/2);l++){
+				for(int k=j-(window_y_size/2);k<=j;k++){
+					temp=mean_f[1]-(float)Mpixel(image1,l,k);
+					temp=temp*temp;
+					result[1]=result[1]+temp;
+				}
+			}
+			result[1]=result[1]/small_window_size;
+
+
+			//the section of f[2]
+			//  | | | |        
+			//	|*|*| |
+			//	|*|*| |
+			result[2]=0;
+			for(int l=i-(window_x_size/2);l<=i;l++){
+				for(int k=j;k<=j+(window_y_size/2);k++){
+					temp=mean_f[2]-(float)Mpixel(image1,l,k);
+					temp=temp*temp;
+					result[2]=result[2]+temp;
+				}
+			}
+			result[2]=result[2]/small_window_size;
+
+
+			//the section of f[3]
+			//  | | | |        
+			//	| |*|*|
+			//	| |*|*|
+			result[3]=0;
+			for(int l=i;l<=i+(window_x_size/2);l++){
+				for(int k=j;k<=j+(window_x_size/2);k++){
+					temp=mean_f[3]-(float)Mpixel(image1,l,k);
+					temp=temp*temp;
+					// cout<<"temp: "<<temp<<endl;
+					result[3]=result[3]+temp;
+				}
+			}
+			// getchar();
+
+			result[3]=result[3]/small_window_size;
+
+
+
+
+
+
+
+
+
+
+
+
+			// cout<<"s_f[3]: "<<s_f[3]<<endl;
+			// cout<<"f[3]: "<<	f[3]<<endl;
+			// cout<<"small_window_size: "<<small_window_size<<endl; 
+			cout<<"result[0]: "<<result[0]<<endl;			
+			cout<<"result[1]: "<<result[1]<<endl;			
+			cout<<"result[2]: "<<result[2]<<endl;			
+			cout<<"result[3]: "<<result[3]<<endl;
+			cout<<"i: "<<i<<endl;
+			cout<<"j: "<<j<<endl;			
+			// cout<<"f[3]*f[3]: "<<f[3]*f[3]<<endl;
+			// cout<<"f[3]*f[3])/small_window_size: "<<(f[3]*f[3])/small_window_size<<endl;
+			/*
+				The process finding the smallest value between f[0] and f[3].
+			*/
+			float final=9999;
+			for(int l=0;l<4;l++){
+				// cout<<"result: "<<result[l]<<endl;
+				// if(final>f[l]){
+				// 	final=f[l];
+				// }
+				if(final>result[l]){
+					final=result[l];
+				}
+			}
+
+			for(int l=0;l<4;l++){
+				if(final==result[l]){
+					Mpixel(image2,i,j)=mean_f[l];
+					break;
+				}
+			}
+			// cout<<"final: "<<final<<endl;
+			// if(final>255){
+			// 	// getchar();
+			// 	Mpixel(image2,i,j)=(int)Mpixel(image1,i,j);
+			// }else{
+			// Mpixel(image2,i,j)=(int)final;	
+			// }
+
+			
+			//////////////////////////// 
+
+		}
+	}
+
+}
+
+void Kuwahara_Filter_Gray_Without_Sum_Table(Mat source_image, Mat output_image, int window_size){
+	//This is function for applying the Kuwahara filter to output_image, it must require summed-area table.
+
+	//Mat source_image is the source image with gray scale. 
+	//Mat output_image is the final output which is applied to Kuwahara filter in gray scale image.
+	//double** integral_image is 2-dimensional array which stores the summed-area table.
+	//int window_size is the size of window it is big more blurly when the value is high.
+
+	int picture_x_size=source_image.cols;//the x-axis length of source image.
+	int picture_y_size=source_image.rows;//the y-axis length of source image.
+
+
+	
+	for(int i=0;i<=source_image.cols-(window_size);i++){
+		for(int j=0;j<=source_image.rows-(window_size);j++){
+			double f[4];
+			double s_f[4];
+			double result[4];
+			int small_window_size=(window_size/2+1)*(window_size/2+1);
+
+			int i_col[4];
+			int i_row[4];
+
+			i_col[0]=i;
+			i_row[0]=j;
+
+			i_col[1]=i+(window_size/2);
+			i_row[1]=j;
+
+			i_col[2]=i;
+			i_row[2]=j+(window_size/2);
+
+			i_col[3]=i+(window_size/2);
+			i_row[3]=j+(window_size/2);
+
+			double mean_f[4];
+
+			// cout<<"small_window_size: "<<small_window_size<<endl;
+
+			mean_f[0]=0;
+			for(int l=i;l<=i+(window_size/2);l++){
+				for(int k=j;k<=j+(window_size/2);k++){
+					mean_f[0]=mean_f[0]+(float)Mpixel(source_image,l,k);
+				}
+			}
+			mean_f[0]=mean_f[0]/small_window_size;
+
+			// cout<<"mean_f[0]: "<<mean_f[0]<<endl;
+			
+			//the section of f[1]
+			//  | |*|*|        
+			//	| |*|*|
+			//	| | | |
+			mean_f[1]=0;
+			for(int l=i+(window_size/2);l<i+window_size;l++){
+				for(int k=j;k<=j+(window_size/2);k++){
+					mean_f[1]=mean_f[1]+(float)Mpixel(source_image,l,k);
+				}
+			}
+			mean_f[1]=mean_f[1]/small_window_size;
+
+			// cout<<"mean_f[1]: "<<mean_f[1]<<endl;
+
+			//the section of f[2]
+			//  | | | |        
+			//	|*|*| |
+			//	|*|*| |
+
+			mean_f[2]=0;
+			for(int l=i;l<=i+(window_size/2);l++){
+				for(int k=j+(window_size/2);k<j+window_size;k++){
+					mean_f[2]=mean_f[2]+(float)Mpixel(source_image,l,k);
+				}
+			}
+			mean_f[2]=mean_f[2]/small_window_size;
+			// cout<<"mean_f[2]: "<<mean_f[2]<<endl;
+
+
+			//the section of f[3]
+			//  | | | |        
+			//	| |*|*|
+			//	| |*|*|
+
+			mean_f[3]=0;
+			for(int l=i+(window_size/2);l<i+window_size;l++){
+				for(int k=j+(window_size/2);k<j+window_size;k++){
+					mean_f[3]=mean_f[3]+(float)Mpixel(source_image,l,k);
+				}
+			}
+
+			mean_f[3]=mean_f[3]/small_window_size;
+			// cout<<"mean_f[3]: "<<mean_f[3]<<endl;
+			
+			
+
+			double temp=0;
+			result[0]=0;
+			for(int l=i;l<=i+(window_size/2);l++){
+				for(int k=j;k<=j+(window_size/2);k++){
+					temp=mean_f[0]-(double)Mpixel(source_image,l,k);
+					temp=temp*temp;
+					result[0]=result[0]+temp;
+				}
+			}
+
+			result[0]=result[0]/small_window_size;
+
+
+			
+			//the section of f[1]
+			//  | |*|*|        
+			//	| |*|*|
+			//	| | | |
+			result[1]=0;
+			for(int l=i+(window_size/2);l<i+window_size;l++){
+				for(int k=j;k<=j+(window_size/2);k++){
+					temp=mean_f[1]-(double)Mpixel(source_image,l,k);
+					temp=temp*temp;
+					result[1]=result[1]+temp;
+				}
+			}
+			result[1]=result[1]/small_window_size;
+
+
+			//the section of f[2]
+			//  | | | |        
+			//	|*|*| |
+			//	|*|*| |
+			result[2]=0;
+			for(int l=i;l<=i+(window_size/2);l++){
+				for(int k=j+(window_size/2);k<j+window_size;k++){
+					temp=mean_f[2]-(double)Mpixel(source_image,l,k);
+					temp=temp*temp;
+					result[2]=result[2]+temp;
+				}
+			}
+			result[2]=result[2]/small_window_size;
+
+
+			//the section of f[3]
+			//  | | | |        
+			//	| |*|*|
+			//	| |*|*|
+			result[3]=0;
+			for(int l=i+(window_size/2);l<i+window_size;l++){
+				for(int k=j+(window_size/2);k<j+window_size;k++){
+					temp=mean_f[3]-(double)Mpixel(source_image,l,k);
+					temp=temp*temp;
+					// cout<<"temp: "<<temp<<endl;
+					result[3]=result[3]+temp;
+				}
+			}
+			// getchar();
+
+			result[3]=result[3]/small_window_size;
+
+			double final=9999;
+			int min_index=0;
+			for(int l=0;l<4;l++){
+				if(final>result[l]){
+					final=result[l];
+					min_index=l;
+				}
+			}
+			Mpixel(output_image,i+window_size/2,j+window_size/2)=(int)mean_f[min_index];
+		}
+	}
+
+}
+
+
+
 void Filter_Gray(Mat image1, Mat image2, int window_size){
 	// This is function for applying the Kuwahara filter to gray-image2 (without summed-table).
 
@@ -424,154 +1094,6 @@ void Filter_Gray(Mat image1, Mat image2, int window_size){
 }
 
 
-void Filter(Mat3b image1, Mat3b image2, int window_size){
-	// This is function for applying the Kuwahara filter to color-image2 (without summed-table).
-
-	// Mat3b image1 is the source image with color. 
-	// Mat3b image2 is the final output which is applied to Kuwahara filter in color image.
-
-	// int window_size is the size of window it is big more blurly when the value is high.
-	
-	int picture_x_size=image1.cols;//the x-axis length of source image.
-	int picture_y_size=image1.rows;//the y-axis length of source image.
-	int window_x_size=window_size;//the x-axis length of window.
-	int window_y_size=window_size;//the y-axis length of window.
-
-	for(int i=(window_x_size/2);i<picture_x_size-(window_x_size/2);i++){
-		for(int j=(window_y_size/2);j<picture_y_size-(window_y_size/2);j++){
-			
-			int valueB[4];
-			int valueR[4];
-			int valueG[4];
-			int f_B[4];
-			int f_R[4];
-			int f_G[4];
-
-			int small_window_size=((window_x_size/2)+1)*((window_y_size/2)+1);
-
-
-			//	This is 3*3 window
-			//  | | | |        
-			//	| | | |
-			//	| | | |
-
-
-
-			//the section of f[0]
-			//  |*|*| |        
-			//	|*|*| |
-			//	| | | |
-
-			valueB[0]=0;
-			valueR[0]=0;
-			valueG[0]=0;
-			for(int l=i-(window_x_size/2);l<=i;l++){
-				for(int k=j-(window_y_size/2);k<=j;k++){
-					valueB[0]=valueB[0]+(int)pixelB(image1,l,k);
-					valueR[0]=valueR[0]+(int)pixelR(image1,l,k);
-					valueG[0]=valueG[0]+(int)pixelG(image1,l,k);
-				}
-			}
-
-			f_B[0]=valueB[0]/small_window_size;
-			f_R[0]=valueR[0]/small_window_size;
-			f_G[0]=valueG[0]/small_window_size;
-
-			
-			//the section of f[1]
-			//  | |*|*|        
-			//	| |*|*|
-			//	| | | |
-
-			valueB[1]=0;
-			valueR[1]=0;
-			valueG[1]=0;
-			for(int l=i;l<=i+(window_x_size/2);l++){
-				for(int k=j-(window_y_size/2);k<=j;k++){
-					valueB[1]=valueB[1]+(int)pixelB(image1,l,k);
-					valueR[1]=valueR[1]+(int)pixelR(image1,l,k);
-					valueG[1]=valueG[1]+(int)pixelG(image1,l,k);
-				}
-			}
-
-			f_B[1]=valueB[1]/small_window_size;
-			f_R[1]=valueR[1]/small_window_size;
-			f_G[1]=valueG[1]/small_window_size;
-
-			//the section of f[2]
-			//  | | | |        
-			//	|*|*| |
-			//	|*|*| |
-
-			valueB[2]=0;
-			valueR[2]=0;
-			valueG[2]=0;
-			for(int l=i-(window_x_size/2);l<=i;l++){
-				for(int k=j;k<=j+(window_y_size/2);k++){
-					valueB[2]=valueB[2]+(int)pixelB(image1,l,k);
-					valueR[2]=valueR[2]+(int)pixelR(image1,l,k);
-					valueG[2]=valueG[2]+(int)pixelG(image1,l,k);
-				}
-			}
-
-			f_B[2]=valueB[2]/small_window_size;
-			f_R[2]=valueR[2]/small_window_size;
-			f_G[2]=valueG[2]/small_window_size;
-
-
-			//the section of f[3]
-			//  | | | |        
-			//	| |*|*|
-			//	| |*|*|
-
-			valueB[3]=0;
-			valueR[3]=0;
-			valueG[3]=0;
-			for(int l=i;l<=i+(window_x_size/2);l++){
-				for(int k=j;k<=j+(window_x_size/2);k++){
-					valueB[3]=valueB[3]+(int)pixelB(image1,l,k);
-					valueR[3]=valueR[3]+(int)pixelR(image1,l,k);
-					valueG[3]=valueG[3]+(int)pixelG(image1,l,k);
-				}
-			}
-
-			f_B[3]=valueB[3]/small_window_size;
-			f_R[3]=valueR[3]/small_window_size;
-			f_G[3]=valueG[3]/small_window_size;
-
-
-			/*
-				The process finding the smallest value between f[0] and f[3].
-			*/
-
-			int final_r=9999;
-			int final_g=9999;
-			int final_b=9999;
-			for(int l=0;l<4;l++){
-				if(final_b>f_B[l]){
-					final_b=f_B[l];
-				}
-
-				if(final_g>f_G[l]){
-					final_g=f_G[l];
-				}
-
-				if(final_r>f_R[l]){
-					final_r=f_R[l];
-				}
-			}
-
-			pixelR(image2,i,j)=final_r;
-			pixelG(image2,i,j)=final_g;
-			pixelB(image2,i,j)=final_b;
-			///////////////////////////
-			
-
-		}
-	}
-
-}
-
 
 int main(int argc,char **argv){
 	double fps=0.0;	
@@ -599,27 +1121,89 @@ int main(int argc,char **argv){
 		output=Mat::zeros(gray_image2.size(),CV_LOAD_IMAGE_GRAYSCALE);//initialize the value of output metrices to zero
 		final_output=Mat::zeros(gray_image2.size(),CV_8UC3);//initialize the value of final_output metrices to zero
 
+		gray_image2=Mat::ones(gray_image2.size(),CV_LOAD_IMAGE_GRAYSCALE);//initialize the value of output metrices to zero
+		Mat gray_image3=Mat::ones(gray_image2.size(),CV_LOAD_IMAGE_GRAYSCALE);//initialize the value of output metrices to zero
+		gray_image2=gray_image2+gray_image3;
+
+
+
 		//////////////////////////////////////
 		//Kuwahara filter using Summed-table//
 		//////////////////////////////////////
 
 		/*Memory Allocation*/
 		double** integral_image=new double*[gray_image2.cols+1];
-		for(int i = 0; i < gray_image2.cols+1; ++i)
+		double** squared_integral_image=new double*[gray_image2.cols+1];
+		for(int i = 0; i < gray_image2.cols+1; ++i){
 			integral_image[i] = new double[gray_image2.rows+1];
+			squared_integral_image[i] = new double[gray_image2.rows+1];
+		}
 		/*********************/
 
-		Integral_Gray_Initialize(gray_image2,integral_image);//create summed-table to integral_image array.
-		Filter_Gray_Integral(gray_image2,output,integral_image,35);//Applying kuwahara filter to output using integral_image.
+		Integral_Gray_Initialize(gray_image2,integral_image,squared_integral_image);//create summed-table to integral_image array.
+		Integral_test(gray_image2,integral_image,squared_integral_image);//create summed-table to integral_image array.
+		
+		Kuwahara_Filter_Gray_Without_Sum_Table(gray_image2,output,7);//Applying kuwahara filter to output using integral_image.
 		
 		/*Memory deallocation*/
 		for(int i = 0; i < gray_image1.cols+1; ++i) {
 			delete [] integral_image[i];
+			delete [] squared_integral_image[i];
 		}
 		delete [] integral_image;
+		delete [] squared_integral_image;
 		/***************/
 		
 		///////////////////////////////////////
+
+
+
+
+
+		// //////////////////////////////////////
+		// //Kuwahara filter using Summed-table with colour//
+		// //////////////////////////////////////
+
+		// /*Memory Allocation*/
+		// double** integral_image_R=new double*[gray_image2.cols+1];
+		// double** squared_integral_image_R=new double*[gray_image2.cols+1];
+		// double** integral_image_G=new double*[gray_image2.cols+1];
+		// double** squared_integral_image_G=new double*[gray_image2.cols+1];
+		// double** integral_image_B=new double*[gray_image2.cols+1];
+		// double** squared_integral_image_B=new double*[gray_image2.cols+1];
+
+		// for(int i = 0; i < gray_image2.cols+1; ++i){
+		// 	integral_image_R[i] = new double[gray_image2.rows+1];
+		// 	squared_integral_image_R[i] = new double[gray_image2.rows+1];
+		// 	integral_image_G[i] = new double[gray_image2.rows+1];
+		// 	squared_integral_image_G[i] = new double[gray_image2.rows+1];
+		// 	integral_image_B[i] = new double[gray_image2.rows+1];
+		// 	squared_integral_image_B[i] = new double[gray_image2.rows+1];
+		// }
+		// /*********************/
+		// Mat3b color_output;
+		// color_output=Mat::zeros(gray_image2.size(),CV_8UC3);//initialize the value of final_output metrices to zero
+		// Integral_Color_Initialize(image2,integral_image_B,integral_image_G,integral_image_R,squared_integral_image_B,squared_integral_image_G,squared_integral_image_R);//create summed-table to integral_image array.
+		// Kuwahara_Filter_Color_With_Sum_Table(image2,color_output,integral_image_B,integral_image_G,integral_image_R,squared_integral_image_B,squared_integral_image_G,squared_integral_image_R,5);//Applying kuwahara filter to output using integral_image.
+		
+		// /*Memory deallocation*/
+		// for(int i = 0; i < gray_image1.cols+1; ++i) {
+		// 	delete [] integral_image_R[i];
+		// 	delete [] squared_integral_image_R[i];
+		// 	delete [] integral_image_G[i];
+		// 	delete [] squared_integral_image_G[i];
+		// 	delete [] integral_image_B[i];
+		// 	delete [] squared_integral_image_B[i];
+		// }
+		// delete [] integral_image_R;
+		// delete [] squared_integral_image_R;
+		// delete [] integral_image_G;
+		// delete [] squared_integral_image_G;
+		// delete [] integral_image_B;
+		// delete [] squared_integral_image_B;
+		// /***************/
+		
+		// ///////////////////////////////////////
 
 
 
@@ -630,7 +1214,15 @@ int main(int argc,char **argv){
 		// Filter_Gray(gray_image2,output,15);
 		
 		///////////////////////////////////////
-		
+		namedWindow("image2",WINDOW_NORMAL);
+		namedWindow("color_output",WINDOW_NORMAL);
+		resizeWindow("color_output", 1200,1200);
+		resizeWindow("image2", 1200,1200);
+		// imshow("color_output" ,color_output);
+		imshow("image2" ,image2);
+		// imwrite( "lee_eun.jpg", color_output );
+		waitKey(0);
+		exit(0);
 
 		/*subtraction process between The first image and the second image*/
 		for(int x=0; x<gray_image2.cols;x++){
@@ -662,6 +1254,10 @@ int main(int argc,char **argv){
 
     	/*final_output show*/
     	imshow("final_output" ,final_output);
+    	imshow("filtered image" ,output);
+
+
+
     	waitKey(0);
     	/*************/
 
@@ -697,6 +1293,8 @@ int main(int argc,char **argv){
 	   		Mat3b image2;
 	   		Mat gray_image2;
 	   		Mat output;
+	   		Mat output1;
+	   		Mat output2;
 	   		Mat3b final_output;
 	   		cap >> image2;
 			
@@ -704,6 +1302,8 @@ int main(int argc,char **argv){
 			
 			if(!image2.data){printf("Could not open the file\n"); exit(0);}
 			output=Mat::zeros(gray_image2.size(),CV_LOAD_IMAGE_GRAYSCALE);//initialize the value of output metrices to zero
+			output1=Mat::zeros(gray_image1.size(),CV_LOAD_IMAGE_GRAYSCALE);//initialize the value of output metrices to zero
+			output2=Mat::zeros(gray_image2.size(),CV_LOAD_IMAGE_GRAYSCALE);//initialize the value of output metrices to zero
     		final_output=Mat::zeros(gray_image2.size(),CV_8UC3);//initialize the value of final_output metrices to zero
 
     		//////////////////////////////////////
@@ -711,19 +1311,37 @@ int main(int argc,char **argv){
     		//////////////////////////////////////
 
 			/*Memory Allocation*/
-			double** integral_image=new double*[gray_image2.cols+1];
-			for(int i = 0; i < gray_image2.cols+1; ++i)
-    			integral_image[i] = new double[gray_image2.rows+1];
+			double** integral_image1=new double*[gray_image1.cols+1];
+			double** squared_integral_image1=new double*[gray_image1.cols+1];
+
+			double** integral_image2=new double*[gray_image2.cols+1];
+			double** squared_integral_image2=new double*[gray_image2.cols+1];
+			for(int i = 0; i < gray_image2.cols+1; ++i){
+				integral_image1[i] = new double[gray_image1.rows+1];
+				squared_integral_image1[i] = new double[gray_image1.rows+1];
+
+				integral_image2[i] = new double[gray_image2.rows+1];
+				squared_integral_image2[i] = new double[gray_image2.rows+1];
+			}
     		/*********************/
 
-    		Integral_Gray_Initialize(gray_image2,integral_image);//create summed-table to integral_image array.
-    		Filter_Gray_Integral(gray_image2,output,integral_image,35);//Applying kuwahara filter to output using integral_image.
-    		
-    		/*Memory deallocation*/
+    		Integral_Gray_Initialize(gray_image2,integral_image2,squared_integral_image2);//create summed-table to integral_image array.
+    		Kuwahara_Filter_Gray_With_Sum_Table(gray_image2,output2,integral_image2,squared_integral_image2,5);//Applying kuwahara filter to output using integral_image.
+    		Integral_Gray_Initialize(gray_image1,integral_image1,squared_integral_image1);//create summed-table to integral_image array.
+    		Kuwahara_Filter_Gray_With_Sum_Table(gray_image1,output1,integral_image1,squared_integral_image1,5);//Applying kuwahara filter to output using integral_image.
+		
+			/*Memory deallocation*/
 			for(int i = 0; i < gray_image1.cols+1; ++i) {
-    			delete [] integral_image[i];
+				delete [] integral_image1[i];
+				delete [] squared_integral_image1[i];
+
+				delete [] integral_image2[i];
+				delete [] squared_integral_image2[i];
 			}
-			delete [] integral_image;
+			delete [] integral_image1;
+			delete [] squared_integral_image1;
+			delete [] integral_image2;
+			delete [] squared_integral_image2;
 			/***************/
 			
 			///////////////////////////////////////
@@ -740,23 +1358,31 @@ int main(int argc,char **argv){
     		
 
 			/*subtraction process between The first image and the second image*/
-			for(int x=0; x<gray_image2.cols;x++){
-				for(int y=0; y<gray_image2.rows;y++){
-					Mpixel(output,x,y)=(float)Mpixel(gray_image1,x,y)-(float)Mpixel(gray_image2,x,y);
-					// Mpixel(output,x,y)=(float)Mpixel(gray_image2,x,y)-(float)Mpixel(gray_image1,x,y);
-					// cout<<"x:"<<x<<" y: "<<y<<endl;
+			// output=output2-output1;
+			// output=output1-output2;
+			output=gray_image1-gray_image2;
+			// for(int x=0; x<gray_image2.cols;x++){
+			// 	for(int y=0; y<gray_image2.rows;y++){
+			// 		// Mpixel(output,x,y)=(float)Mpixel(output1,x,y)-(float)Mpixel(output2,x,y);
+			// 		// Mpixel(output,x,y)=(float)Mpixel(output2,x,y)-(float)Mpixel(output1,x,y);
+			// 		// Mpixel(output,x,y)=(float)Mpixel(output2,x,y)-(float)Mpixel(gray_image1,x,y);
+			// 		// Mpixel(output,x,y)=(double)Mpixel(gray_image1,x,y)-(double)Mpixel(gray_image2,x,y);
+			// 		// cout<<"x:"<<x<<" y: "<<y<<endl;
 
-					if(Mpixel(output,x,y)<100){//thresholding
-						Mpixel(output,x,y)=0;
-					}
-				}
-			}
+			// 		if(Mpixel(output,x,y)<50){//thresholding
+			// 			Mpixel(output,x,y)=0;
+			// 		}
+			// 	}
+			// }
 
 			/*****************************************************************/
 
 			/*Load the subtracted area to final_output from source*/
 			for(int x=0; x<gray_image2.cols;x++){
 				for(int y=0; y<gray_image2.rows;y++){
+					if(Mpixel(output,x,y)<30){//thresholding
+						Mpixel(output,x,y)=0;
+					}
 					if((int)Mpixel(output,x,y)!=0){
 						pixelB(final_output,x,y)=pixelB(image2,x,y);
 						pixelG(final_output,x,y)=pixelG(image2,x,y);
@@ -769,6 +1395,9 @@ int main(int argc,char **argv){
 
 	    	/*final_output show*/
 	    	imshow("final_output" ,final_output);
+	    	imshow("output" ,output);
+	    	imshow("image1" ,output1);
+	    	imshow("image2" ,output2);
 	    	/*************/
 	    	
 	    	/*program termination*/
@@ -782,6 +1411,9 @@ int main(int argc,char **argv){
 	     	fps = 1000000/seconds;
 	     	cout << "frames " << fps << " seconds " << seconds << endl;
 	     	/*********************************/
+
+	     	image1=image2;
+	     	cvtColor(image1,gray_image1, CV_BGR2GRAY);//copy camera color image to gray scale
 	    }
 	    /************/
 	}
