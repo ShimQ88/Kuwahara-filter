@@ -1127,83 +1127,83 @@ int main(int argc,char **argv){
 
 
 
-		//////////////////////////////////////
-		//Kuwahara filter using Summed-table//
-		//////////////////////////////////////
-
-		/*Memory Allocation*/
-		double** integral_image=new double*[gray_image2.cols+1];
-		double** squared_integral_image=new double*[gray_image2.cols+1];
-		for(int i = 0; i < gray_image2.cols+1; ++i){
-			integral_image[i] = new double[gray_image2.rows+1];
-			squared_integral_image[i] = new double[gray_image2.rows+1];
-		}
-		/*********************/
-
-		Integral_Gray_Initialize(gray_image2,integral_image,squared_integral_image);//create summed-table to integral_image array.
-		Integral_test(gray_image2,integral_image,squared_integral_image);//create summed-table to integral_image array.
-		
-		Kuwahara_Filter_Gray_Without_Sum_Table(gray_image2,output,7);//Applying kuwahara filter to output using integral_image.
-		
-		/*Memory deallocation*/
-		for(int i = 0; i < gray_image1.cols+1; ++i) {
-			delete [] integral_image[i];
-			delete [] squared_integral_image[i];
-		}
-		delete [] integral_image;
-		delete [] squared_integral_image;
-		/***************/
-		
-		///////////////////////////////////////
-
-
-
-
-
 		// //////////////////////////////////////
-		// //Kuwahara filter using Summed-table with colour//
+		// //Kuwahara filter using Summed-table//
 		// //////////////////////////////////////
 
 		// /*Memory Allocation*/
-		// double** integral_image_R=new double*[gray_image2.cols+1];
-		// double** squared_integral_image_R=new double*[gray_image2.cols+1];
-		// double** integral_image_G=new double*[gray_image2.cols+1];
-		// double** squared_integral_image_G=new double*[gray_image2.cols+1];
-		// double** integral_image_B=new double*[gray_image2.cols+1];
-		// double** squared_integral_image_B=new double*[gray_image2.cols+1];
-
+		// double** integral_image=new double*[gray_image2.cols+1];
+		// double** squared_integral_image=new double*[gray_image2.cols+1];
 		// for(int i = 0; i < gray_image2.cols+1; ++i){
-		// 	integral_image_R[i] = new double[gray_image2.rows+1];
-		// 	squared_integral_image_R[i] = new double[gray_image2.rows+1];
-		// 	integral_image_G[i] = new double[gray_image2.rows+1];
-		// 	squared_integral_image_G[i] = new double[gray_image2.rows+1];
-		// 	integral_image_B[i] = new double[gray_image2.rows+1];
-		// 	squared_integral_image_B[i] = new double[gray_image2.rows+1];
+		// 	integral_image[i] = new double[gray_image2.rows+1];
+		// 	squared_integral_image[i] = new double[gray_image2.rows+1];
 		// }
 		// /*********************/
-		// Mat3b color_output;
-		// color_output=Mat::zeros(gray_image2.size(),CV_8UC3);//initialize the value of final_output metrices to zero
-		// Integral_Color_Initialize(image2,integral_image_B,integral_image_G,integral_image_R,squared_integral_image_B,squared_integral_image_G,squared_integral_image_R);//create summed-table to integral_image array.
-		// Kuwahara_Filter_Color_With_Sum_Table(image2,color_output,integral_image_B,integral_image_G,integral_image_R,squared_integral_image_B,squared_integral_image_G,squared_integral_image_R,5);//Applying kuwahara filter to output using integral_image.
+
+		// Integral_Gray_Initialize(gray_image2,integral_image,squared_integral_image);//create summed-table to integral_image array.
+		// Integral_test(gray_image2,integral_image,squared_integral_image);//create summed-table to integral_image array.
+		
+		// Kuwahara_Filter_Gray_Without_Sum_Table(gray_image2,output,7);//Applying kuwahara filter to output using integral_image.
 		
 		// /*Memory deallocation*/
 		// for(int i = 0; i < gray_image1.cols+1; ++i) {
-		// 	delete [] integral_image_R[i];
-		// 	delete [] squared_integral_image_R[i];
-		// 	delete [] integral_image_G[i];
-		// 	delete [] squared_integral_image_G[i];
-		// 	delete [] integral_image_B[i];
-		// 	delete [] squared_integral_image_B[i];
+		// 	delete [] integral_image[i];
+		// 	delete [] squared_integral_image[i];
 		// }
-		// delete [] integral_image_R;
-		// delete [] squared_integral_image_R;
-		// delete [] integral_image_G;
-		// delete [] squared_integral_image_G;
-		// delete [] integral_image_B;
-		// delete [] squared_integral_image_B;
+		// delete [] integral_image;
+		// delete [] squared_integral_image;
 		// /***************/
 		
 		// ///////////////////////////////////////
+
+
+
+
+
+		//////////////////////////////////////
+		//Kuwahara filter using Summed-table with colour//
+		//////////////////////////////////////
+
+		/*Memory Allocation*/
+		double** integral_image_R=new double*[gray_image2.cols+1];
+		double** squared_integral_image_R=new double*[gray_image2.cols+1];
+		double** integral_image_G=new double*[gray_image2.cols+1];
+		double** squared_integral_image_G=new double*[gray_image2.cols+1];
+		double** integral_image_B=new double*[gray_image2.cols+1];
+		double** squared_integral_image_B=new double*[gray_image2.cols+1];
+
+		for(int i = 0; i < gray_image2.cols+1; ++i){
+			integral_image_R[i] = new double[gray_image2.rows+1];
+			squared_integral_image_R[i] = new double[gray_image2.rows+1];
+			integral_image_G[i] = new double[gray_image2.rows+1];
+			squared_integral_image_G[i] = new double[gray_image2.rows+1];
+			integral_image_B[i] = new double[gray_image2.rows+1];
+			squared_integral_image_B[i] = new double[gray_image2.rows+1];
+		}
+		/*********************/
+		Mat3b color_output;
+		color_output=Mat::zeros(gray_image2.size(),CV_8UC3);//initialize the value of final_output metrices to zero
+		Integral_Color_Initialize(image2,integral_image_B,integral_image_G,integral_image_R,squared_integral_image_B,squared_integral_image_G,squared_integral_image_R);//create summed-table to integral_image array.
+		Kuwahara_Filter_Color_With_Sum_Table(image2,color_output,integral_image_B,integral_image_G,integral_image_R,squared_integral_image_B,squared_integral_image_G,squared_integral_image_R,9);//Applying kuwahara filter to output using integral_image.
+		
+		/*Memory deallocation*/
+		for(int i = 0; i < gray_image1.cols+1; ++i) {
+			delete [] integral_image_R[i];
+			delete [] squared_integral_image_R[i];
+			delete [] integral_image_G[i];
+			delete [] squared_integral_image_G[i];
+			delete [] integral_image_B[i];
+			delete [] squared_integral_image_B[i];
+		}
+		delete [] integral_image_R;
+		delete [] squared_integral_image_R;
+		delete [] integral_image_G;
+		delete [] squared_integral_image_G;
+		delete [] integral_image_B;
+		delete [] squared_integral_image_B;
+		/***************/
+		
+		///////////////////////////////////////
 
 
 
@@ -1218,7 +1218,7 @@ int main(int argc,char **argv){
 		namedWindow("color_output",WINDOW_NORMAL);
 		resizeWindow("color_output", 1200,1200);
 		resizeWindow("image2", 1200,1200);
-		// imshow("color_output" ,color_output);
+		imshow("color_output" ,color_output);
 		imshow("image2" ,image2);
 		// imwrite( "lee_eun.jpg", color_output );
 		waitKey(0);
@@ -1394,8 +1394,8 @@ int main(int argc,char **argv){
 			/*******************************************************/
 
 	    	/*final_output show*/
-	    	imshow("final_output" ,final_output);
-	    	imshow("output" ,output);
+	    	imshow("color_output" ,final_output);
+	    	imshow("Gray_output" ,output);
 	    	imshow("image1" ,output1);
 	    	imshow("image2" ,output2);
 	    	/*************/
