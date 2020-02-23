@@ -29,6 +29,256 @@ using namespace chrono;
 #define pixelG(image,x,y) image.data[image.step[0]*y+image.step[1]*x+1]	//Green color space
 #define pixelR(image,x,y) image.data[image.step[0]*y+image.step[1]*x+2]	//Red color space
 
+void Grey_to_Color(Mat3b source_image, Mat filtered_image,Mat3b output_image){
+	for(int x=0; x<source_image.cols;x++){
+		for(int y=0; y<source_image.rows;y++){
+			if(Mpixel(filtered_image,x,y)!=0){//when pixel is not zero
+				pixelB(output_image,x,y)=pixelB(source_image,x,y);
+				pixelG(output_image,x,y)=pixelG(source_image,x,y);
+				pixelR(output_image,x,y)=pixelR(source_image,x,y);
+			}
+		}	
+	}
+}
+void Determining_ROI_Size(Mat source_image, int *small_x, int *small_y,int *large_x,int *large_y){
+	//This is function for finding coordinates (p1 and p2) of rectangle before cropping Region of Interest area
+
+	// * p1(small_x,small_y)
+	// @ p2(large_x,large_y)
+	//  |*| | |        
+	//	| | | |
+	//	| | |@|
+
+
+	*small_x=9999;
+	*small_y=9999;
+	*large_x=-9999;
+	*large_y=-9999;
+	for(int x=0; x<source_image.cols;x++){
+		for(int y=0; y<source_image.rows;y++){
+			if(Mpixel(source_image,x,y)!=0){//when pixel is not zero
+				if(x>*large_x){
+					*large_x=x;
+				}
+				if(y>*large_y){
+					*large_y=y;
+				}
+				if(x<*small_x){
+					*small_x=x;
+				}
+				if(y<*small_y){
+					*small_y=y;
+				}
+			}
+		}	
+	}
+}
+
+
+void Image_stitching(Mat source_image,Mat filtered_image,Mat output_image){
+	
+	//vertical way
+	int sm[source_image.cols];
+	int lar[source_image.cols];
+	for(int x=0; x<source_image.cols;x++){
+		sm[x]=9999;
+		lar[x]=-9999;
+		for(int y=0; y<source_image.rows;y++){
+			if(Mpixel(filtered_image,x,y)<30){//thresholding
+											  //this is better to do seperate but I put on here for performancing
+				Mpixel(filtered_image,x,y)=0;
+			}
+
+			if((int)Mpixel(filtered_image,x,y)!=0){//The process for detecting the beginning point of pixel and the last point of pixel of each column. 
+				if(y<sm[x]){
+					sm[x]=y;
+				}
+				if(y>lar[x]){
+					lar[x]=y;
+				}
+			}
+			if(x!=0){
+				if( (y>=sm[x-1])&&(y<=lar[x-1])){//The vertical way copy all previous line pixels from the point of the first detected pixcel to the last.  
+					Mpixel(output_image,x-1,y)=Mpixel(source_image,x-1,y);
+				}
+			}
+			if( (x==source_image.cols-1)&&(y==source_image.rows-1) ){//The same process of upper process but the last one is exception.
+				for(int a=sm[x]; a<lar[x];a++){
+					Mpixel(output_image,x,a)=Mpixel(source_image,x,a);	
+				}						
+			}
+
+		}
+	}
+	//horizontal way
+	int sm2[source_image.rows];
+	int lar2[source_image.rows];
+	for(int x=0; x<source_image.rows;x++){
+		sm2[x]=9999;
+		lar2[x]=-9999;
+		for(int y=0; y<source_image.cols;y++){
+			if((int)Mpixel(output_image,y,x)!=0){//The process for detecting the beginning point of pixel and the last point of pixel of each row.
+				if(y<sm2[x]){
+					sm2[x]=y;
+				}
+				if(y>lar2[x]){
+					lar2[x]=y;
+				}
+			}
+			if(x!=0){
+				if( (y>sm2[x-1])&&(y<lar2[x-1])  ){//The horizontal way copy all previous line pixels from the point of the first detected pixcel to the last.  
+					Mpixel(output_image,y,x-1)=Mpixel(source_image,y,x-1);	
+				}							
+			}
+			if( (x==source_image.rows-1)&&(y==source_image.cols-1) ){//the case of last
+				for(int a=sm2[x]; a<lar2[x];a++){
+					Mpixel(output_image,a,x)=Mpixel(source_image,a,x);	
+				}						
+			}
+		}
+	}
+}
+void median_filter(Mat image1,Mat image2,int window_size){
+    //picture elements(pels)
+    int function_size_input=window_size;//this is for window size
+
+    int picture_x_size=image1.cols;
+    int picture_y_size=image1.rows;
+    int mdn;//median value in a window
+    int ltmdn=0;// number of pels having gray levels less than mdn in a window
+    int window_x_size=function_size_input;
+    int window_y_size=function_size_input;
+    //int hist[window_x_size*window_y_size];
+    int index_for_array=0;
+    int count_of_less_than_median=0;
+    int median_value;
+    int left_column[window_y_size];
+    int right_column[window_y_size];
+    // int left_column[window_y_size-1];
+    // int right_column[window_y_size-1];
+    int hist_index=0;
+    int g1;
+
+    int th=(window_x_size*window_y_size/2);
+    
+    // for(int i=0;i<picture_y_size;i++){
+    //      Mpixel(image2,637,i)=255;
+    //  }
+    
+    for(int i=(window_x_size/2);i<picture_x_size-(window_x_size/2);i++){
+        
+        int hist[256];
+        for(int q=0;q<256;q++){
+            hist[q]=0;
+        }
+
+        int index_for_hist=0;
+        int y_sizeof=i+window_y_size;
+        int x_sizeof=(window_x_size/2)+window_x_size;
+        for(int a=i;a<y_sizeof;a++){
+            for(int b=(window_x_size/2);b<x_sizeof;b++){
+                index_for_hist=(int)Mpixel(image1,a,b);
+                hist[index_for_hist]=hist[index_for_hist]+1;
+            }
+        }
+
+
+        int counter_for_find_median=(window_x_size*window_y_size/2)+1;
+        int counter_for_find_less_than_median=0;
+
+        for(int z=0;z<256;z++){
+            if(hist[z]!=0){ 
+                counter_for_find_median=counter_for_find_median-hist[z];
+                if(counter_for_find_median<=0){
+                    median_value=z;
+                    mdn=median_value;
+                    break;
+                }else{
+                    counter_for_find_less_than_median
+                    =counter_for_find_less_than_median+hist[z];
+                }
+            }       
+        }
+
+        ltmdn=counter_for_find_less_than_median;
+
+        //Mpixel(image2,i,(window_y_size/2))=mdn;
+
+        for(int j=(window_y_size/2)+1;j<picture_y_size-(window_y_size/2);j++){//j indicates picture column number
+
+    
+            int index_for_left_column=0;
+            int index_for_right_column=0;
+
+            for(int l=i;l<i+window_x_size;l++){
+                left_column[index_for_left_column]=(int)Mpixel(image1,l,j);
+                index_for_left_column++;
+
+                right_column[index_for_right_column]=(int)Mpixel(image1,l,j+window_x_size-1);               
+                index_for_right_column++;   
+            }
+            
+                    
+            
+
+            for(int k=0;k<window_y_size;k++){
+                g1=left_column[k];
+                hist[g1]=hist[g1]-1;
+                if(g1<mdn){
+                    ltmdn=ltmdn-1;
+                }
+                g1=right_column[k];
+                hist[g1]=hist[g1]+1;
+                if(g1<mdn){
+                    ltmdn=ltmdn+1;
+                }
+
+                if(ltmdn>th){
+                    while(true){
+                        mdn=mdn-1;
+                        ltmdn=ltmdn-hist[mdn];
+                        if(ltmdn<=th){
+                            break;
+                        }
+                    }
+                }else{
+                    while(ltmdn+hist[mdn]<=th){
+                        ltmdn=ltmdn+hist[mdn];
+                        mdn=mdn+1;
+                    }
+                }
+            }
+            Mpixel(image2,i,j)=mdn; //determine pixel
+        }
+    }
+
+    for(int j=0;j<window_size/2+1;j++){ 
+        for(int i=0;i<picture_y_size;i++){
+            Mpixel(image2,j,i)=0;
+            Mpixel(image2,picture_x_size-1-j,i)=0;
+        }
+    }
+    for(int j=0;j<window_size/2+1;j++){ 
+        for(int i=window_size/2;i<picture_x_size-(window_size/2);i++){
+            Mpixel(image2,i,j)=0;
+            Mpixel(image2,i,picture_y_size-1-j)=0;
+        }
+    }
+
+}
+
+int FindTheLargestContour(std::vector<vector<Point>>contours){
+    int largestcontour=0;
+    long int largestsize=0;
+    for(int i=0;i<contours.size();i++){
+        if(largestsize<contours[i].size()){
+            largestsize=contours[i].size();
+            largestcontour=i;
+        }
+    }
+    return largestcontour;
+}
+
 
 void Integral_test(Mat image1, double **integral_image, double **squared_integral_image){
 //This is the function for printing out 1/20 size of original metrices values and summed-area table values.
@@ -1250,11 +1500,23 @@ int main(int argc,char **argv){
 
 			}
 		}
+
+
+		// Scalar color=CV_RGB(255,0,0);
+		// std::vector<vector<Point>>contours;
+		// findContours(output,contours,CV_RETR_EXTERNAL,CV_CHAIN_APPROX_NONE);
+
+        
+  //       int largestcontour=FindTheLargestContour(contours);
+  //       Mat drawing=Mat::zeros(output.size(),CV_8UC3);
+		// drawContours(drawing,contours,largestcontour,color,2,8);
 		/*******************************************************/
 
     	/*final_output show*/
     	imshow("final_output" ,final_output);
     	imshow("filtered image" ,output);
+    	imshow("gray_image2" ,gray_image2);
+    	// imshow("drawing" ,drawing);
 
 
 
@@ -1286,9 +1548,9 @@ int main(int argc,char **argv){
 	   	/*****************/
 
 	   	/*The Second image process*/
+	   	int j=0;
 	   	while (1){
 	   		system_clock::time_point start = system_clock::now();//start clock
-	   		
 	   		
 	   		Mat3b image2;
 	   		Mat gray_image2;
@@ -1326,9 +1588,9 @@ int main(int argc,char **argv){
     		/*********************/
 
     		Integral_Gray_Initialize(gray_image2,integral_image2,squared_integral_image2);//create summed-table to integral_image array.
-    		Kuwahara_Filter_Gray_With_Sum_Table(gray_image2,output2,integral_image2,squared_integral_image2,5);//Applying kuwahara filter to output using integral_image.
+    		Kuwahara_Filter_Gray_With_Sum_Table(gray_image2,output2,integral_image2,squared_integral_image2,11);//Applying kuwahara filter to output using integral_image.
     		Integral_Gray_Initialize(gray_image1,integral_image1,squared_integral_image1);//create summed-table to integral_image array.
-    		Kuwahara_Filter_Gray_With_Sum_Table(gray_image1,output1,integral_image1,squared_integral_image1,5);//Applying kuwahara filter to output using integral_image.
+    		Kuwahara_Filter_Gray_With_Sum_Table(gray_image1,output1,integral_image1,squared_integral_image1,11);//Applying kuwahara filter to output using integral_image.
 		
 			/*Memory deallocation*/
 			for(int i = 0; i < gray_image1.cols+1; ++i) {
@@ -1352,52 +1614,58 @@ int main(int argc,char **argv){
     		//Kuwahara filter without Summed-table//
     		////////////////////////////////////////
     		
-    		// Filter_Gray(gray_image2,output,15);
+    		// Filter_Gray(gray_image2,output,5);
+
     		
     		///////////////////////////////////////
     		
 
 			/*subtraction process between The first image and the second image*/
-			// output=output2-output1;
-			// output=output1-output2;
 			output=gray_image1-gray_image2;
-			// for(int x=0; x<gray_image2.cols;x++){
-			// 	for(int y=0; y<gray_image2.rows;y++){
-			// 		// Mpixel(output,x,y)=(float)Mpixel(output1,x,y)-(float)Mpixel(output2,x,y);
-			// 		// Mpixel(output,x,y)=(float)Mpixel(output2,x,y)-(float)Mpixel(output1,x,y);
-			// 		// Mpixel(output,x,y)=(float)Mpixel(output2,x,y)-(float)Mpixel(gray_image1,x,y);
-			// 		// Mpixel(output,x,y)=(double)Mpixel(gray_image1,x,y)-(double)Mpixel(gray_image2,x,y);
-			// 		// cout<<"x:"<<x<<" y: "<<y<<endl;
+			/********************************/
+			
+			/***Cropping Object by outline of object***/
+			Mat temp_window=Mat::zeros(image2.size(),CV_LOAD_IMAGE_GRAYSCALE);//gray case
+			Image_stitching(gray_image2,output,temp_window);
+			/******************************************/
 
-			// 		if(Mpixel(output,x,y)<50){//thresholding
-			// 			Mpixel(output,x,y)=0;
-			// 		}
-			// 	}
-			// }
+			/***ROI Section***/
+			int small_x,small_y,large_x,large_y;//size of
+			Determining_ROI_Size(temp_window,&small_x,&small_y,&large_x,&large_y);
+			Mat ROI;
+			if((large_x==-9999)||(large_y==-9999)||(small_x==9999)||(small_y==9999)){
+				ROI=Mat::zeros(gray_image2.size(),CV_LOAD_IMAGE_GRAYSCALE);//Default size
+			}else{
 
-			/*****************************************************************/
+				Rect faces;
+				faces.width=large_x;
+				faces.height=large_y;
+				ROI = gray_image2(faces);
+				for(int x=small_x; x<large_x; x++){
+					for(int y=small_y; y<large_y; y++){
+						/*in case of color*/
+						// pixelB(ROI,x,y)=pixelB(image2,x,y);
+						// pixelG(ROI,x,y)=pixelG(image2,x,y);
+						// pixelR(ROI,x,y)=pixelR(image2,x,y);
 
-			/*Load the subtracted area to final_output from source*/
-			for(int x=0; x<gray_image2.cols;x++){
-				for(int y=0; y<gray_image2.rows;y++){
-					if(Mpixel(output,x,y)<30){//thresholding
-						Mpixel(output,x,y)=0;
+						Mpixel(ROI,x-small_x,y-small_y)=Mpixel(gray_image2,x,y);					
 					}
-					if((int)Mpixel(output,x,y)!=0){
-						pixelB(final_output,x,y)=pixelB(image2,x,y);
-						pixelG(final_output,x,y)=pixelG(image2,x,y);
-						pixelR(final_output,x,y)=pixelR(image2,x,y);
-					}
-
 				}
 			}
+			
+			/***final output color***/
+			Grey_to_Color(image2,temp_window,final_output);
+
 			/*******************************************************/
 
-	    	/*final_output show*/
+	    	/*output Showing Section*/
 	    	imshow("color_output" ,final_output);
+	    	imshow("ROI" ,ROI);
+	    	imshow("temp_window" ,temp_window);
 	    	imshow("Gray_output" ,output);
-	    	imshow("image1" ,output1);
-	    	imshow("image2" ,output2);
+
+	    	// imshow("image1" ,output1);
+	    	// imshow("image2" ,output2);
 	    	/*************/
 	    	
 	    	/*program termination*/
@@ -1411,7 +1679,15 @@ int main(int argc,char **argv){
 	     	fps = 1000000/seconds;
 	     	cout << "frames " << fps << " seconds " << seconds << endl;
 	     	/*********************************/
-
+	     	
+	     	/***Delay for image1***/
+	     	// j++;
+	     	// if(j==3){
+	     	// 	image1=image2;
+	     	// 	cvtColor(image1,gray_image1, CV_BGR2GRAY);//copy camera color image to gray scale
+	     	// 	j=0;
+	     	// }
+	     	/**********************/
 	     	image1=image2;
 	     	cvtColor(image1,gray_image1, CV_BGR2GRAY);//copy camera color image to gray scale
 	    }
