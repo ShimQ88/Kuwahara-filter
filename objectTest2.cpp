@@ -72,6 +72,12 @@ void Determining_ROI_Size(Mat source_image, int *small_x, int *small_y,int *larg
 			}
 		}	
 	}
+	if((*small_x==9999)||(*small_y==9999)||(*large_x==-9999)||(*large_y==-9999)){
+		*small_x=0;
+		*small_y=0;
+		*large_x=0;
+		*large_y=0;
+	}
 }
 
 
@@ -84,7 +90,7 @@ void Image_stitching(Mat source_image,Mat filtered_image,Mat output_image){
 		sm[x]=9999;
 		lar[x]=-9999;
 		for(int y=0; y<source_image.rows;y++){
-			if(Mpixel(filtered_image,x,y)<30){//thresholding
+			if(Mpixel(filtered_image,x,y)<35){//thresholding
 											  //this is better to do seperate but I put on here for performancing
 				Mpixel(filtered_image,x,y)=0;
 			}
@@ -1377,6 +1383,7 @@ int main(int argc,char **argv){
 
 
 
+
 		// //////////////////////////////////////
 		// //Kuwahara filter using Summed-table//
 		// //////////////////////////////////////
@@ -1487,6 +1494,7 @@ int main(int argc,char **argv){
 			}
 		}
 
+
 		/*****************************************************************/
 
 		/*Load the subtracted area to final_output from source*/
@@ -1514,8 +1522,8 @@ int main(int argc,char **argv){
 
     	/*final_output show*/
     	imshow("final_output" ,final_output);
-    	imshow("filtered image" ,output);
-    	imshow("gray_image2" ,gray_image2);
+    	// imshow("filtered image" ,output);
+    	// imshow("gray_image2" ,gray_image2);
     	// imshow("drawing" ,drawing);
 
 
@@ -1524,7 +1532,28 @@ int main(int argc,char **argv){
     	/*************/
 
 	}else{//dynamic mode with camera
+		/*Information*/
 		cout<<"dynamic mode"<<endl;
+		// const string about =
+	 //        "This is Master Project in Massey University.\n"
+	 //        "The example file can be downloaded from:\n"
+	 //        "https://github.com/ShimQ88/Kuwahara-filter";
+	 //    const string keys =
+	 //        "{ h help |      | print this help message }"
+	 //        "{ @image |<none>| path to image file }";
+  //       CommandLineParser parser(argc, argv, keys);
+	 //    parser.about(about);
+	 //    if (parser.has("help"))
+	 //    {
+	 //        parser.printMessage();
+	 //        return 0;
+	 //    }
+  //       string filename = parser.get<string>("@image");
+	 //    if (!parser.check())
+	 //    {
+	 //        parser.printErrors();
+	 //        return 0;
+	 //    }
 
 		/*Camera setup*/
 		VideoCapture cap;
@@ -1538,6 +1567,34 @@ int main(int argc,char **argv){
         cap.set(CV_CAP_PROP_FRAME_HEIGHT, 480);
         /**************/
 
+        /*capture*/
+     //    const string about =
+	    //     "This sample demonstrates the camshift algorithm.\n"
+	    //     "The example file can be downloaded from:\n"
+	    //     "  https://www.bogotobogo.com/python/OpenCV_Python/images/mean_shift_tracking/slow_traffic_small.mp4";
+	    // const string keys =
+	    //     "{ h help |      | print this help message }"
+	    //     "{ @image |<none>| path to image file }";
+     //    CommandLineParser parser(argc, argv, keys);
+	    // parser.about(about);
+	    // if (parser.has("help"))
+	    // {
+	    //     parser.printMessage();
+	    //     return 0;
+	    // }
+     //    string filename = parser.get<string>("@image");
+	    // if (!parser.check())
+	    // {
+	    //     parser.printErrors();
+	    //     return 0;
+	    // }
+	    // VideoCapture cap(filename);
+	    // if (!cap.isOpened()){
+	    //     //error in opening the video input
+	    //     cerr << "Unable to open file!" << endl;
+	    //     return 0;
+	    // }
+
         /*The First image*/
         Mat3b image1;
         Mat gray_image1;
@@ -1546,6 +1603,14 @@ int main(int argc,char **argv){
 	   	if(!image1.data){printf("Could not open the file\n"); exit(0);}
 	   	cvtColor(image1,gray_image1, CV_BGR2GRAY);//copy camera color image to gray scale
 	   	/*****************/
+
+	   	//////////////////////////////////////
+		//Kuwahara filter using Summed-table//
+		//////////////////////////////////////
+    	
+    	
+
+		
 
 	   	/*The Second image process*/
 	   	int j=0;
@@ -1627,42 +1692,90 @@ int main(int argc,char **argv){
 			/***Cropping Object by outline of object***/
 			Mat temp_window=Mat::zeros(image2.size(),CV_LOAD_IMAGE_GRAYSCALE);//gray case
 			Image_stitching(gray_image2,output,temp_window);
+
+			
+
 			/******************************************/
 
 			/***ROI Section***/
 			int small_x,small_y,large_x,large_y;//size of
 			Determining_ROI_Size(temp_window,&small_x,&small_y,&large_x,&large_y);
-			Mat ROI;
-			if((large_x==-9999)||(large_y==-9999)||(small_x==9999)||(small_y==9999)){
-				ROI=Mat::zeros(gray_image2.size(),CV_LOAD_IMAGE_GRAYSCALE);//Default size
-			}else{
+			// median_filter(temp_window,temp_window,15);
+			Rect window(small_x, small_y, large_x-small_x, large_y-small_y); // simply hardcoded the values
+			rectangle(final_output, window, Scalar(0, 0, 255), 2);
+				
 
-				Rect faces;
-				faces.width=large_x;
-				faces.height=large_y;
-				ROI = gray_image2(faces);
-				for(int x=small_x; x<large_x; x++){
-					for(int y=small_y; y<large_y; y++){
-						/*in case of color*/
-						// pixelB(ROI,x,y)=pixelB(image2,x,y);
-						// pixelG(ROI,x,y)=pixelG(image2,x,y);
-						// pixelR(ROI,x,y)=pixelR(image2,x,y);
+			int x_value=(large_x-small_x-small_x);
+			int y_value=(large_y-small_y-small_y);
+			int trigger=x_value+y_value;
+			
+			/*Debugging for values*/
+			// cout<<"1.small_x:"<<small_x<<endl;
+			// cout<<"1.large_x:"<<large_x<<endl;
+			// cout<<"2.small_y:"<<small_y<<endl;
+			// cout<<"2.large_y:"<<large_y<<endl;
+			/**********************/
 
-						Mpixel(ROI,x-small_x,y-small_y)=Mpixel(gray_image2,x,y);					
-					}
+			/*Mean shift part*/
+			if( trigger>500 ){//trigger to work meanshift.(question1)
+				cout<<"mean shift working"<<endl;
+				// cout<<"1.small_x:"<<small_x<<endl;
+				// cout<<"1.large_x:"<<large_x<<endl;
+				// cout<<"2.small_y"<<small_y<<endl;
+				// cout<<"2.large_y"<<large_y<<endl;
+				Rect track_window(small_x, small_y, large_x-small_x, large_y-small_y);
+				float range_[] = {0, 90};
+			    const float* range[] = {range_};
+			    Mat roi_hist;
+			    Mat roi, mask;
+			    // Mat mask;
+			    roi = image2(track_window);
+			    int histSize[] = {180};
+			    int channels[] = {0};
+			    calcHist(&image2, 1, channels, mask, roi_hist, 1, histSize, range);
+			    normalize(roi_hist, roi_hist, 0, 255, NORM_MINMAX);
+			    TermCriteria term_crit(TermCriteria::EPS | TermCriteria::COUNT, 10, 1);
+				while(1){
+					system_clock::time_point start = system_clock::now();//start clock
+					Mat hsv, dst;
+			        cap >> image2;
+			        if (image2.empty())
+			            break;
+			        calcBackProject(&image2, 1, channels, roi_hist, dst, range);
+			        
+			        // apply camshift to get the new location
+			        RotatedRect rot_rect = CamShift(dst, track_window, term_crit);
+			        
+			        // Draw it on image
+			        Point2f points[4];
+			        rot_rect.points(points);
+			        int loop_breaker=0;
+			        for (int i = 0; i < 4; i++){
+			            line(image2, points[i], points[(i+1)%4], 255, 2);
+			            if((points[i].x<0)||(points[i].x>640)||(points[i].y<0)||(points[i].y>480)){
+			            	loop_breaker++;
+			            }
+			        }
+			        if(loop_breaker>=2){//breaking rule (question2)
+			        	break;
+			        }
+			        imshow("object following window", image2);
+			        imshow("dst of object", dst);
+			        // imshow("roi", roi);
+			        
+			        key=waitKey(1);
+			        system_clock::time_point end = system_clock::now();
+			       	double seconds = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+			     	fps = 1000000/seconds;
+			     	cout << "frames " << fps << " seconds " << seconds << endl;
 				}
 			}
-			
-			/***final output color***/
+			/**********************/
+
 			Grey_to_Color(image2,temp_window,final_output);
-
-			/*******************************************************/
-
-	    	/*output Showing Section*/
-	    	imshow("color_output" ,final_output);
-	    	imshow("ROI" ,ROI);
 	    	imshow("temp_window" ,temp_window);
-	    	imshow("Gray_output" ,output);
+	    	imshow("final_output" ,final_output);
+	    	// imshow("Gray_output" ,output);
 
 	    	// imshow("image1" ,output1);
 	    	// imshow("image2" ,output2);
